@@ -1,0 +1,17 @@
+{
+  "name": "rhino-base-to-gnosis-usdc",
+  "version": "1.0.0",
+  "description": "CLI to bridge 1 USDC from Base to Gnosis using rhino.fi",
+  "main": "src/bridge.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check": "node src/check.js",
+    "bridge": "node src/bridge.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "ethers": "^6.13.4"
+  }
+}
