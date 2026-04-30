@@ -9,7 +9,7 @@ function requireEnv(name) {
     console.error(`Error: environment variable ${name} is required but not set.`);
     process.exit(1);
   }
-  return value;
+  return value.trim();
 }
 
 const RHINO_API_KEY = requireEnv('RHINO_API_KEY');
@@ -23,11 +23,10 @@ if (!BASE_SIGNER_PRIVATE_KEY.startsWith('0x')) {
 }
 
 if (!ethers.isAddress(GNOSIS_RECIPIENT_ADDRESS)) {
-  console.error(`Error: GNOSIS_RECIPIENT_ADDRESS is not a valid Ethereum address: ${GNOSIS_RECIPIENT_ADDRESS}`);
+  console.error(`Error: GNOSIS_RECIPIENT_ADDRESS is not a valid EVM address: ${GNOSIS_RECIPIENT_ADDRESS}`);
   process.exit(1);
 }
 
-// Constants
 const USDC_BASE = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 const RHINO_BRIDGE_CONTRACT = '0x2f59e9086ec8130e21bd052065a9e6b2497bb102';
 const BASE_CHAIN_ID = 8453n;
@@ -35,8 +34,7 @@ const USDC_DECIMALS = 6;
 const BRIDGE_AMOUNT = '1';
 const CHAIN_IN = 'BASE';
 const CHAIN_OUT = 'GNOSIS';
-const TOKEN_IN = 'USDC';
-const TOKEN_OUT = 'USDC';
+const TOKEN = 'USDC';
 const MODE = 'pay';
 
 const config = {
@@ -55,7 +53,8 @@ module.exports = {
   BRIDGE_AMOUNT,
   CHAIN_IN,
   CHAIN_OUT,
-  TOKEN_IN,
-  TOKEN_OUT,
+  TOKEN,
+  TOKEN_IN: TOKEN,
+  TOKEN_OUT: TOKEN,
   MODE,
 };

@@ -3,12 +3,6 @@
 const readline = require('readline/promises');
 const { stdin: input, stdout: output } = require('process');
 
-/**
- * Prints a message and asks the user to press Enter to continue or type
- * q/quit/exit to abort.
- *
- * @param {string} message
- */
 async function confirmStep(message) {
   const rl = readline.createInterface({ input, output });
   try {

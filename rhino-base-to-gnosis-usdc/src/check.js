@@ -11,12 +11,9 @@ async function main() {
   const sender = wallet.address;
   const recipient = config.GNOSIS_RECIPIENT_ADDRESS;
 
-  // Verify chain
   await checkBaseChain(wallet.provider);
 
-  // Read balances
   const { ethBalance, usdcBalance, allowance } = await readBalances();
-
   const usdcAmount = parseUsdc('1');
 
   console.log('Configuration:');
@@ -28,7 +25,6 @@ async function main() {
   console.log(`  Amount to bridge:        1 USDC (raw: ${usdcAmount})`);
   console.log(`  USDC contract (Base):    ${USDC_BASE}`);
   console.log(`  Bridge contract (Base):  ${RHINO_BRIDGE_CONTRACT}`);
-
   console.log('\nCheck complete. No transactions were sent.');
 }
 

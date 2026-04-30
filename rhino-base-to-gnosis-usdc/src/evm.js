@@ -20,8 +20,7 @@ function getProvider() {
 }
 
 function getWallet() {
-  const provider = getProvider();
-  return new ethers.Wallet(config.BASE_SIGNER_PRIVATE_KEY, provider);
+  return new ethers.Wallet(config.BASE_SIGNER_PRIVATE_KEY, getProvider());
 }
 
 function getUsdcContract(walletOrProvider) {
@@ -32,95 +31,74 @@ function getBridgeContract(wallet) {
   return new ethers.Contract(RHINO_BRIDGE_CONTRACT, RHINO_BRIDGE_ABI, wallet);
 }
 
-/**
- * Parse a human-readable USDC amount string to its raw BigInt representation.
- * e.g. parseUsdc("1") => 1000000n
- */
 function parseUsdc(amount) {
   return ethers.parseUnits(amount, USDC_DECIMALS);
 }
 
-/**
- * Ensure the provider is connected to Base mainnet (chain ID 8453).
- */
 async function checkBaseChain(provider) {
   const network = await provider.getNetwork();
   if (network.chainId !== BASE_CHAIN_ID) {
-    throw new Error(
-      `Wrong chain! Expected Base (chainId ${BASE_CHAIN_ID}), got chainId ${network.chainId}. ` +
-      'Check your BASE_RPC_URL.'
-    );
+    throw new Error(`Wrong chain! Expected Base chainId ${BASE_CHAIN_ID}, got ${network.chainId}. Check BASE_RPC_URL.`);
   }
 }
 
-/**
- * Read ETH balance, USDC balance, and USDC allowance for the sender.
- * Returns { ethBalance, usdcBalance, allowance } as BigInt.
- */
 async function readBalances() {
   const wallet = getWallet();
   const provider = wallet.provider;
   const sender = wallet.address;
-
   const usdc = getUsdcContract(provider);
-
   const [ethBalance, usdcBalance, allowance] = await Promise.all([
     provider.getBalance(sender),
     usdc.balanceOf(sender),
     usdc.allowance(sender, RHINO_BRIDGE_CONTRACT),
   ]);
-
   return { ethBalance, usdcBalance, allowance };
 }
 
-/**
- * Approve the Rhino bridge contract to spend exactly requiredAmount of USDC,
- * but only if the current allowance is insufficient.
- */
 async function approveIfNeeded(requiredAmount) {
   const wallet = getWallet();
   const usdc = getUsdcContract(wallet);
   const sender = wallet.address;
-
   const currentAllowance = await usdc.allowance(sender, RHINO_BRIDGE_CONTRACT);
 
   if (currentAllowance >= requiredAmount) {
-    console.log(`Allowance already sufficient (${currentAllowance}). Skipping approval.`);
+    console.log(`Allowance already sufficient (${currentAllowance} raw units). Skipping approval.`);
     return null;
   }
 
-  console.log(`\nSending APPROVAL transaction on Base mainnet...`);
-  console.log(`  Approving ${requiredAmount} raw USDC units to Rhino bridge ${RHINO_BRIDGE_CONTRACT}`);
-
+  console.log('\nSending APPROVAL transaction on Base mainnet...');
+  console.log(` Approving ${requiredAmount} raw USDC units to Rhino bridge ${RHINO_BRIDGE_CONTRACT}`);
   const tx = await usdc.approve(RHINO_BRIDGE_CONTRACT, requiredAmount);
-  console.log(`  Approval tx hash: ${tx.hash}`);
-  console.log('  Waiting for confirmation...');
-
+  console.log(` Approval tx hash: ${tx.hash}`);
+  console.log(' Waiting for confirmation...');
   const receipt = await tx.wait();
-  console.log(`  Approval confirmed in block ${receipt.blockNumber}`);
+  console.log(` Approval confirmed in block ${receipt.blockNumber}`);
   return receipt;
 }
 
-/**
- * Call depositWithId on the Rhino bridge contract.
- */
+function commitmentIdFromQuoteId(quoteId) {
+  const id = String(quoteId).trim();
+  if (/^0x[0-9a-fA-F]+$/.test(id)) return BigInt(id);
+  if (/^[0-9a-fA-F]+$/.test(id)) return BigInt(`0x${id}`);
+  throw new Error(`quoteId/commitmentId is not hex-compatible: ${id}`);
+}
+
 async function depositWithId(commitmentId, amount) {
   const wallet = getWallet();
   const bridge = getBridgeContract(wallet);
 
-  console.log(`\nSending DEPOSIT transaction on Base mainnet...`);
-  console.log(`  Token:        ${USDC_BASE}`);
-  console.log(`  Amount:       ${amount} raw units`);
-  console.log(`  CommitmentId: ${commitmentId}`);
-  console.log(`  Bridge:       ${RHINO_BRIDGE_CONTRACT}`);
+  console.log('\nSending DEPOSIT transaction on Base mainnet...');
+  console.log(` Token: ${USDC_BASE}`);
+  console.log(` Amount: ${amount} raw units`);
+  console.log(` CommitmentId: ${commitmentId}`);
+  console.log(` Bridge: ${RHINO_BRIDGE_CONTRACT}`);
 
-  const tx = await bridge.depositWithId(USDC_BASE, amount, BigInt(commitmentId));
-  console.log(`  Deposit tx hash: ${tx.hash}`);
-  console.log('  Waiting for confirmation...');
-
+  const tx = await bridge.depositWithId(USDC_BASE, amount, commitmentId);
+  console.log(` Deposit tx hash: ${tx.hash}`);
+  console.log(' Waiting for confirmation...');
   const receipt = await tx.wait();
-  console.log(`  Deposit confirmed in block ${receipt.blockNumber}`);
-  console.log(`  Tx hash: ${receipt.hash}`);
+  console.log(` Deposit confirmed in block ${receipt.blockNumber}`);
+  console.log(` Tx hash: ${receipt.hash}`);
   return receipt;
 }
 
@@ -134,4 +112,5 @@ module.exports = {
   readBalances,
   approveIfNeeded,
   depositWithId,
+  commitmentIdFromQuoteId,
 };
